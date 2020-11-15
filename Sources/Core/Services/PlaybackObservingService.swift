@@ -28,7 +28,7 @@ import AVFoundation
 
 //sourcery: AutoMockable
 protocol PlaybackObservingService {
-    var onPlaybackStalled: (() -> Void)? { get set }
+    var onPlaybackStalled: ((Bool) -> Void)? { get set }
     var onPlayToEndTime: (() -> Void)? { get set }
     var onFailedToPlayToEndTime: (() -> Void)? { get set }
 }
@@ -40,8 +40,10 @@ final class ModernAVPlayerPlaybackObservingService: PlaybackObservingService {
     private let player: AVPlayer
     
     // MARK: - Outputs
+  
+    var withError = false
     
-    var onPlaybackStalled: (() -> Void)?
+    var onPlaybackStalled: ((_ withError: Bool) -> Void)?
     var onPlayToEndTime: (() -> Void)?
     var onFailedToPlayToEndTime: (() -> Void)?
     
@@ -56,6 +58,7 @@ final class ModernAVPlayerPlaybackObservingService: PlaybackObservingService {
                                                name: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(ModernAVPlayerPlaybackObservingService.itemFailedToPlayToEndTime),
                                                name: NSNotification.Name.AVPlayerItemFailedToPlayToEndTime, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(ModernAVPlayerPlaybackObservingService.newErrorLogEntry(_:)), name: .AVPlayerItemNewErrorLogEntry, object: nil)
     }
     
     deinit {
@@ -69,6 +72,9 @@ final class ModernAVPlayerPlaybackObservingService: PlaybackObservingService {
         NotificationCenter.default.removeObserver(self,
                                                   name: NSNotification.Name.AVPlayerItemFailedToPlayToEndTime,
                                                   object: nil)
+        NotificationCenter.default.removeObserver(self,
+                                                name: .AVPlayerItemNewErrorLogEntry,
+                                                object: nil)
     }
     
     private func hasReallyReachedEndTime(player: AVPlayer) -> Bool {
@@ -79,6 +85,7 @@ final class ModernAVPlayerPlaybackObservingService: PlaybackObservingService {
         /// item current time when receive end time notification
         /// is not so accurate according to duration
         /// added +1 make sure about the computation
+        if duration.isNaN { return true }
         let currentTime = player.currentTime().seconds + 1
         return currentTime >= duration
     }
@@ -86,7 +93,7 @@ final class ModernAVPlayerPlaybackObservingService: PlaybackObservingService {
     @objc
     private func itemPlaybackStalled() {
         ModernAVPlayerLogger.instance.log(message: "Item playback stalled notification", domain: .service)
-        onPlaybackStalled?()
+        onPlaybackStalled?(withError)
     }
     
     ///
@@ -104,5 +111,24 @@ final class ModernAVPlayerPlaybackObservingService: PlaybackObservingService {
     private func itemFailedToPlayToEndTime() {
         ModernAVPlayerLogger.instance.log(message: "Item failed to play endtime notification", domain: .service)
         onFailedToPlayToEndTime?()
+    }
+  
+    // Getting error from Notification payload
+    @objc
+    func newErrorLogEntry(_ notification: Notification) {
+      guard let object = notification.object, let playerItem = object as? AVPlayerItem else {
+        return
+      }
+      guard let errorLog: AVPlayerItemErrorLog = playerItem.errorLog() else {
+        return
+      }
+      print("Player state: \(Date().debugDescription) Error newErrorLogEntry: \(errorLog.events.map({"\($0.errorStatusCode): \($0.errorComment ?? "")"}))")
+      let count = errorLog.events.filter({ [-12938, -12888].contains($0.errorStatusCode) }).count
+      print("Player state: \(Date().debugDescription) Errors count: \(count)")
+      
+      if count > 1 {
+        withError = true
+      }
+      
     }
 }
