@@ -44,6 +44,7 @@ final class PlayingState: PlayerState {
     
     let type: ModernAVPlayer.State = .playing
     private var optTimerObserver: Any?
+    private var workItem = DispatchWorkItem(block: {})
     
     // MARK: - Lifecycle
 
@@ -136,11 +137,16 @@ final class PlayingState: PlayerState {
               self?.context.player.pause()
               self?.redirectToFailedState()
             } else {
-              guard let context = self?.context else { return }
-              context.player.play()
-              let state = BufferingState(context: context)
-              self?.changeState(state: state)
-              state.playCommand()
+              self?.workItem.cancel()
+              let workItem = DispatchWorkItem(block: {
+                guard let context = self?.context else { return }
+                context.player.play()
+                let state = BufferingState(context: context)
+                self?.changeState(state: state)
+                state.playCommand()
+              })
+              self?.workItem = workItem
+              DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: workItem)
             }
         }
         itemPlaybackObservingService.onFailedToPlayToEndTime = { [weak self] in self?.redirectToWaitingForNetworkState()
@@ -197,7 +203,8 @@ final class PlayingState: PlayerState {
 
     private func setTimerObserver() {
         optTimerObserver = context.player.addPeriodicTimeObserver(forInterval: periodicPlayingTime,
-                                                                  queue: nil) { [weak context] time in
+                                                                  queue: nil) { [weak context, weak self] time in
+            self?.workItem.cancel()
             context?.delegate?.playerContext(didCurrentTimeChange: time.seconds)
             context?.nowPlaying.overrideInfoCenter(for: MPNowPlayingInfoPropertyElapsedPlaybackTime,
                                                    value: time.seconds)
