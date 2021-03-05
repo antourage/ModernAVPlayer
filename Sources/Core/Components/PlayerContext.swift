@@ -70,7 +70,13 @@ final class ModernAVPlayerContext: NSObject, PlayerContext {
     
     // MARK: - Variables
     
-    var bgToken: UIBackgroundTaskIdentifier?
+    var bgToken: UIBackgroundTaskIdentifier? {
+      didSet {
+        if let value = oldValue, bgToken != nil {
+          UIApplication.shared.endBackgroundTask(value)
+        }
+      }
+    }
     var currentItem: AVPlayerItem? {
         player.currentItem
     }
@@ -125,6 +131,8 @@ final class ModernAVPlayerContext: NSObject, PlayerContext {
     }
 
     deinit {
+        if let bgToken = self.bgToken { UIApplication.shared.endBackgroundTask(bgToken) }
+        bgToken = nil
         ModernAVPlayerLogger.instance.log(message: "Deinit", domain: .lifecycleState)
     }
 

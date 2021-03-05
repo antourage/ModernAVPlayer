@@ -121,6 +121,7 @@ final class PlayingState: PlayerState {
     }
 
     func stop() {
+        stopBgTask(context: context)
         let state = StoppedState(context: context)
         changeState(state: state)
     }

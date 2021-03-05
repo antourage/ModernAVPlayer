@@ -123,6 +123,8 @@ final class LoadingMediaState: PlayerState {
     }
 
     func stop() {
+        if let token = context.bgToken { UIApplication.shared.endBackgroundTask(token) }
+        context.bgToken = nil
         cancelMediaLoading()
         context.changeState(state: StoppedState(context: context))
     }
