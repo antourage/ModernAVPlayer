@@ -2,6 +2,31 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [X.X.X]
+* Feature:
+	* Accept optional avaudio session catergory option
+* Dependencies:
+	* [gem] Cocoapods -> 1.10.1
+	* [gem] Fastlane -> 2.171.0
+
+## [1.7.3]
+* Fix:
+	* Resume audio on device background mode
+* Breaking change:
+	* `PlayerConfiguration` has a new `AVAudioSessionCategoryOptions` attribute
+
+## [1.7.2]
+* Feature:
+	* tvOS support [@yaroslavlvov]
+* Improvements:
+	* Improve round times in `hasReallyReachedEndTime` func at `PlaybackObservingService.swift` [@Ikloo]
+	* Demo target readability
+* Fix:
+	* Simple audio demo layout for small screen
+* Dependencies:
+	* [gem] Cocoapods -> 1.10.0
+	* [gem] Fastlane -> 2.167.0
+
 ## [1.7.1]
 * Fix:
 	* Spm install

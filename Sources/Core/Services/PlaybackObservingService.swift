@@ -87,7 +87,7 @@ final class ModernAVPlayerPlaybackObservingService: PlaybackObservingService {
         /// added +1 make sure about the computation
         if duration.isNaN { return true }
         let currentTime = player.currentTime().seconds + 1
-        return currentTime >= duration
+        return currentTime.rounded() >= duration.rounded()
     }
     
     @objc
